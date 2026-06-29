@@ -1,5 +1,7 @@
 # Ignore build outputs
 order-service/node_modules/
+order-webapp/node_modules/
+order-webapp/build/
 
 # OS-specific files
 .DS_Store

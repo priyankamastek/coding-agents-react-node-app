@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './OrderList.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
 const OrderList = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await fetch(`${API_BASE_URL}/orders`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       setOrders(data);
     } catch (err) {
@@ -25,30 +25,11 @@ const OrderList = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    const fetchOrdersOnMount = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch(`${API_BASE_URL}/orders`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        setOrders(data);
-      } catch (err) {
-        setError(`Failed to fetch orders: ${err.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrdersOnMount();
-  }, [API_BASE_URL]);
+    fetchOrders();
+  }, [fetchOrders]);
 
   const calculateItemCount = (items) => {
     return items.reduce((total, item) => total + item.quantity, 0);
