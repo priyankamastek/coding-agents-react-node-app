@@ -89,7 +89,58 @@ Retrieves all orders.
 ]
 ```
 
-### 3. Get Order by ID
+### 3. Search/Filter Orders
+**GET** `/orders/search`
+
+Search and filter orders by customer ID, status, or date range. All query parameters are optional and can be combined. Returns full order details including items with names and quantities.
+
+#### Query Parameters
+| Parameter    | Type   | Description |
+|-------------|--------|-------------|
+| `customerId` | string | Filter by customer ID (case-insensitive partial match) |
+| `status`     | string | Filter by order status (`pending`, `processing`, `shipped`, `delivered`, `cancelled`) |
+| `startDate`  | string | Filter orders created on or after this date (ISO 8601 format) |
+| `endDate`    | string | Filter orders created on or before this date (ISO 8601 format) |
+
+#### Response
+**Success (200)**
+```json
+[
+  {
+    "id": 1,
+    "customerId": "customer-123",
+    "items": [
+      {
+        "name": "Product A",
+        "quantity": 2,
+        "price": 25.99
+      }
+    ],
+    "status": "pending",
+    "total": 51.98,
+    "createdAt": "2025-06-03T14:00:00.000Z",
+    "updatedAt": "2025-06-03T14:00:00.000Z"
+  }
+]
+```
+
+**Invalid Status (400)**
+```json
+{
+  "error": "Invalid status filter",
+  "message": "status must be one of: pending, processing, shipped, delivered, cancelled"
+}
+```
+
+**Invalid Date (400)**
+```json
+{
+  "error": "Invalid date format",
+  "message": "startDate must be a valid ISO 8601 date string"
+}
+```
+
+### 4. Get Order by ID
 **GET** `/orders/:id`
 
 Retrieves a specific order by ID.
@@ -127,7 +178,7 @@ Retrieves a specific order by ID.
 }
 ```
 
-### 4. Update Order
+### 5. Update Order
 **PUT** `/orders/:id`
 
 Updates an existing order.
@@ -160,7 +211,7 @@ Same as Create Order request body.
 }
 ```
 
-### 5. Delete Order
+### 6. Delete Order
 **DELETE** `/orders/:id`
 
 Deletes an order by ID.
@@ -225,6 +276,21 @@ curl -X POST http://localhost:8000/orders \
 ### Get All Orders
 ```bash
 curl http://localhost:8000/orders
+```
+
+### Search Orders
+```bash
+# Search by customer ID
+curl "http://localhost:8000/orders/search?customerId=customer-123"
+
+# Search by status
+curl "http://localhost:8000/orders/search?status=pending"
+
+# Search by date range
+curl "http://localhost:8000/orders/search?startDate=2025-01-01T00:00:00.000Z&endDate=2025-12-31T23:59:59.999Z"
+
+# Combine multiple filters
+curl "http://localhost:8000/orders/search?customerId=customer-123&status=pending"
 ```
 
 ### Get Order by ID

@@ -149,6 +149,144 @@ describe('Order Management API', () => {
     });
   });
 
+  describe('GET /orders/search', () => {
+    beforeEach(async () => {
+      await request(app)
+        .post('/orders')
+        .send({
+          customerId: 'customer-123',
+          items: [{ name: 'Product A', quantity: 2, price: 25.99 }],
+          status: 'pending'
+        });
+
+      await request(app)
+        .post('/orders')
+        .send({
+          customerId: 'customer-456',
+          items: [{ name: 'Product B', quantity: 1, price: 15.50 }],
+          status: 'processing'
+        });
+
+      await request(app)
+        .post('/orders')
+        .send({
+          customerId: 'customer-123',
+          items: [{ name: 'Product C', quantity: 3, price: 10.00 }],
+          status: 'shipped'
+        });
+    });
+
+    it('should return all orders when no filters are provided', async () => {
+      const response = await request(app)
+        .get('/orders/search')
+        .expect(200);
+
+      expect(response.body).toHaveLength(3);
+    });
+
+    it('should filter orders by customerId', async () => {
+      const response = await request(app)
+        .get('/orders/search?customerId=customer-123')
+        .expect(200);
+
+      expect(response.body).toHaveLength(2);
+      response.body.forEach(order => {
+        expect(order.customerId).toBe('customer-123');
+      });
+    });
+
+    it('should filter orders by customerId (case-insensitive partial match)', async () => {
+      const response = await request(app)
+        .get('/orders/search?customerId=CUSTOMER-12')
+        .expect(200);
+
+      expect(response.body).toHaveLength(2);
+    });
+
+    it('should filter orders by status', async () => {
+      const response = await request(app)
+        .get('/orders/search?status=processing')
+        .expect(200);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].customerId).toBe('customer-456');
+      expect(response.body[0].status).toBe('processing');
+    });
+
+    it('should return 400 for invalid status filter', async () => {
+      const response = await request(app)
+        .get('/orders/search?status=invalid')
+        .expect(400);
+
+      expect(response.body.error).toBe('Invalid status filter');
+    });
+
+    it('should filter orders by date range', async () => {
+      const now = new Date();
+      const pastDate = new Date(now.getTime() - 86400000).toISOString();
+      const futureDate = new Date(now.getTime() + 86400000).toISOString();
+
+      const response = await request(app)
+        .get(`/orders/search?startDate=${pastDate}&endDate=${futureDate}`)
+        .expect(200);
+
+      expect(response.body).toHaveLength(3);
+    });
+
+    it('should return 400 for invalid startDate', async () => {
+      const response = await request(app)
+        .get('/orders/search?startDate=not-a-date')
+        .expect(400);
+
+      expect(response.body.error).toBe('Invalid date format');
+      expect(response.body.message).toBe('startDate must be a valid ISO 8601 date string');
+    });
+
+    it('should return 400 for invalid endDate', async () => {
+      const response = await request(app)
+        .get('/orders/search?endDate=not-a-date')
+        .expect(400);
+
+      expect(response.body.error).toBe('Invalid date format');
+      expect(response.body.message).toBe('endDate must be a valid ISO 8601 date string');
+    });
+
+    it('should combine multiple filters', async () => {
+      const response = await request(app)
+        .get('/orders/search?customerId=customer-123&status=pending')
+        .expect(200);
+
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].customerId).toBe('customer-123');
+      expect(response.body[0].status).toBe('pending');
+    });
+
+    it('should return empty array when no orders match filters', async () => {
+      const response = await request(app)
+        .get('/orders/search?customerId=nonexistent')
+        .expect(200);
+
+      expect(response.body).toHaveLength(0);
+    });
+
+    it('should return order details with item count and item names', async () => {
+      const response = await request(app)
+        .get('/orders/search?customerId=customer-123')
+        .expect(200);
+
+      expect(response.body).toHaveLength(2);
+      const order = response.body[0];
+      expect(order.items).toBeDefined();
+      expect(order.items[0].name).toBe('Product A');
+      expect(order.items[0].quantity).toBe(2);
+      expect(order.id).toBeDefined();
+      expect(order.customerId).toBeDefined();
+      expect(order.status).toBeDefined();
+      expect(order.total).toBeDefined();
+      expect(order.createdAt).toBeDefined();
+    });
+  });
+
   describe('GET /orders/:id', () => {
     it('should return order by ID', async () => {
       const orderData = {
