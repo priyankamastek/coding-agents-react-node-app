@@ -38,7 +38,7 @@ describe('OrderList Component', () => {
   ];
 
   test('renders loading state initially', () => {
-    fetch.mockImplementation(() => 
+    fetch.mockImplementation(() =>
       new Promise(() => {}) // Never resolves to keep in loading state
     );
 
@@ -62,13 +62,16 @@ describe('OrderList Component', () => {
     expect(screen.getByText('Order Number')).toBeInTheDocument();
     expect(screen.getByText('Customer Number')).toBeInTheDocument();
     expect(screen.getByText('Item Count')).toBeInTheDocument();
+    expect(screen.getByText('Item Names')).toBeInTheDocument();
     expect(screen.getByText('Total')).toBeInTheDocument();
     expect(screen.getByText('Order Status')).toBeInTheDocument();
+    expect(screen.getByText('Created At')).toBeInTheDocument();
 
     // Check first order data
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('customer-123')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument(); // 2 + 1 items
+    expect(screen.getByText('Product A, Product B')).toBeInTheDocument();
     expect(screen.getByText('$67.48')).toBeInTheDocument();
     expect(screen.getByText('pending')).toBeInTheDocument();
 
@@ -76,6 +79,7 @@ describe('OrderList Component', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('customer-456')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument(); // 5 items
+    expect(screen.getByText('Product C')).toBeInTheDocument();
     expect(screen.getByText('$30.00')).toBeInTheDocument();
     expect(screen.getByText('processing')).toBeInTheDocument();
   });
@@ -202,6 +206,114 @@ describe('OrderList Component', () => {
 
     await waitFor(() => {
       expect(fetch).toHaveBeenCalledWith('http://localhost:8000/orders');
+    });
+  });
+
+  test('renders search form with all filter fields', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockOrders,
+    });
+
+    render(<OrderList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Order List')).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Customer ID')).toBeInTheDocument();
+    expect(screen.getByLabelText('Status')).toBeInTheDocument();
+    expect(screen.getByLabelText('Start Date')).toBeInTheDocument();
+    expect(screen.getByLabelText('End Date')).toBeInTheDocument();
+    expect(screen.getByText('Search')).toBeInTheDocument();
+    expect(screen.getByText('Clear')).toBeInTheDocument();
+  });
+
+  test('search button calls search API with filters', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockOrders,
+    });
+
+    render(<OrderList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Order List')).toBeInTheDocument();
+    });
+
+    fetch.mockClear();
+
+    const filteredOrders = [mockOrders[0]];
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => filteredOrders,
+    });
+
+    // Fill in customer ID
+    const customerInput = screen.getByLabelText('Customer ID');
+    fireEvent.change(customerInput, { target: { value: 'customer-123' } });
+
+    // Select status
+    const statusSelect = screen.getByLabelText('Status');
+    fireEvent.change(statusSelect, { target: { value: 'pending' } });
+
+    // Click search
+    const searchButton = screen.getByText('Search');
+    fireEvent.click(searchButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+      const fetchUrl = fetch.mock.calls[0][0];
+      expect(fetchUrl).toContain('/orders/search');
+      expect(fetchUrl).toContain('customerId=customer-123');
+      expect(fetchUrl).toContain('status=pending');
+    });
+  });
+
+  test('clear button resets search and fetches all orders', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockOrders,
+    });
+
+    render(<OrderList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Order List')).toBeInTheDocument();
+    });
+
+    // Fill in some search fields
+    const customerInput = screen.getByLabelText('Customer ID');
+    fireEvent.change(customerInput, { target: { value: 'customer-123' } });
+
+    fetch.mockClear();
+
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockOrders,
+    });
+
+    // Click clear
+    const clearButton = screen.getByText('Clear');
+    fireEvent.click(clearButton);
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledWith('http://localhost:8000/orders');
+      expect(screen.getByLabelText('Customer ID').value).toBe('');
+    });
+  });
+
+  test('displays item names in the order table', async () => {
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockOrders,
+    });
+
+    render(<OrderList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Product A, Product B')).toBeInTheDocument();
+      expect(screen.getByText('Product C')).toBeInTheDocument();
     });
   });
 });

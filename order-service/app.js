@@ -98,6 +98,60 @@ app.get('/orders', (req, res) => {
   }
 });
 
+// Search/filter orders (GET /orders/search)
+app.get('/orders/search', (req, res) => {
+  try {
+    const { customerId, status, startDate, endDate } = req.query;
+    let results = [...orders];
+
+    if (customerId) {
+      results = results.filter(order =>
+        order.customerId.toLowerCase().includes(customerId.toLowerCase())
+      );
+    }
+
+    if (status) {
+      const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          error: 'Invalid status filter',
+          message: `status must be one of: ${validStatuses.join(', ')}`
+        });
+      }
+      results = results.filter(order => order.status === status);
+    }
+
+    if (startDate) {
+      const start = new Date(startDate);
+      if (isNaN(start.getTime())) {
+        return res.status(400).json({
+          error: 'Invalid date format',
+          message: 'startDate must be a valid ISO 8601 date string'
+        });
+      }
+      results = results.filter(order => new Date(order.createdAt) >= start);
+    }
+
+    if (endDate) {
+      const end = new Date(endDate);
+      if (isNaN(end.getTime())) {
+        return res.status(400).json({
+          error: 'Invalid date format',
+          message: 'endDate must be a valid ISO 8601 date string'
+        });
+      }
+      results = results.filter(order => new Date(order.createdAt) <= end);
+    }
+
+    res.json(results);
+  } catch (error) {
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
 // Get order by ID (GET /orders/:id)
 app.get('/orders/:id', (req, res) => {
   try {
