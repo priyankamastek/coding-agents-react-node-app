@@ -157,8 +157,11 @@ describe('OrderList Component', () => {
     const refreshButton = screen.getByText('Refresh');
     fireEvent.click(refreshButton);
 
-    // Verify fetch was called again
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // Verify fetch was called again and wait for state updates to complete
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Order List')).toBeInTheDocument();
+    });
   });
 
   test('retry button refetches orders after error', async () => {
@@ -182,8 +185,11 @@ describe('OrderList Component', () => {
     const retryButton = screen.getByText('Retry');
     fireEvent.click(retryButton);
 
-    // Verify fetch was called again
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // Verify fetch was called again and wait for state updates to complete
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Order List')).toBeInTheDocument();
+    });
   });
 
   test('uses correct API endpoint', async () => {
